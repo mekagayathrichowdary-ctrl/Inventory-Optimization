@@ -1,0 +1,671 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Stock Intelligence Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=DM+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: retail desk bar, policy controls + ABC-XYZ up top, health map, SKU workbench, action plan; agent rail right */
+:root{
+  --bg:#f3f1f4; --surface:#ffffff; --surface-2:#ece8ee; --line:#dcd5de; --fg:#1b1520; --muted:#665c6c;
+  --accent:#a8326a; --accent-soft:#f6dde9; --signal:#d98200;
+  --crit:#c4362b; --warn:#b3730c; --good:#2a8a52; --info:#3a6fc4;
+  --c1:#a8326a; --c2:#d98200; --c3:#3a6fc4; --c4:#1f8a86; --c5:#6a4fc4; --c6:#8d8392;
+  --display:"Outfit", "Segoe UI", system-ui, sans-serif;
+  --body:"Nunito Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"DM Mono", ui-monospace, Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121015; --surface:#1a171e; --surface-2:#231f28; --line:#332d39; --fg:#ece6ef; --muted:#9d93a3;
+  --accent:#ee7aaf; --accent-soft:#3d1a2c; --signal:#f4a83a;
+  --crit:#f26b5c; --warn:#e9b04a; --good:#5ec486; --info:#76a6f2;
+  --c1:#ee7aaf; --c2:#f4a83a; --c3:#76a6f2; --c4:#4cc4bf; --c5:#a993f5; --c6:#7d7385;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121015; --surface:#1a171e; --surface-2:#231f28; --line:#332d39; --fg:#ece6ef; --muted:#9d93a3;
+  --accent:#ee7aaf; --accent-soft:#3d1a2c; --signal:#f4a83a;
+  --crit:#f26b5c; --warn:#e9b04a; --good:#5ec486; --info:#76a6f2;
+  --c1:#ee7aaf; --c2:#f4a83a; --c3:#76a6f2; --c4:#4cc4bf; --c5:#a993f5; --c6:#7d7385;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;font-weight:700;letter-spacing:-.01em}
+.num,td.n,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select,input[type=search],textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand h1{font-size:20px}
+.brand small{display:block;color:var(--muted);font-size:12px;font-family:var(--body)}
+.fest{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;flex-wrap:wrap}
+.fest .cd{display:inline-flex;align-items:center;gap:6px;background:color-mix(in oklab,var(--signal) 16%,var(--surface));color:var(--fg);border:1px solid color-mix(in oklab,var(--signal) 45%,var(--line));padding:4px 10px;border-radius:999px;font-weight:700}
+.fest .cd b{font-family:var(--mono);color:var(--signal)}
+.fest span.m{color:var(--muted)}
+
+.page{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1660px;margin:0 auto}
+@media (max-width:1180px){.page{grid-template-columns:minmax(0,1fr)}}
+main{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.panel-h h3{font-size:17px}
+.panel-h p{margin:2px 0 0;color:var(--muted);font-size:12.5px;max-width:72ch}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+.grid2e{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.grid2,.grid2e{grid-template-columns:minmax(0,1fr)}}
+
+.brief{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:14px}
+.brief h2{font-size:clamp(21px,2.5vw,28px);max-width:36ch}
+.brief .prob{color:var(--muted);max-width:80ch;margin:6px 0 0}
+.pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.pipe button{all:unset;cursor:pointer;padding:12px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;min-width:0}
+.pipe button:last-child{border-right:0}
+.pipe button:hover{background:var(--surface-2)}
+.pipe button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pipe .st{font-size:11px;font-family:var(--mono);color:var(--accent)}
+.pipe b{font-family:var(--display);font-size:15.5px}
+.pipe .d{color:var(--muted);font-size:12px}
+.pipe .v{font-family:var(--mono);font-size:12px}
+@media (max-width:700px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}.pipe button:nth-child(2){border-right:0}.pipe button:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media (max-width:1300px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi .l{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.kpi .l::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--kc,var(--line))}
+.kpi .v{font-family:var(--display);font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi .s{font-size:12px;color:var(--muted)}
+.up-bad{color:var(--crit)} .up-good{color:var(--good)} .warn{color:var(--warn)}
+
+/* controls */
+.ctrls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:560px){.ctrls{grid-template-columns:minmax(0,1fr)}}
+.ctrl{display:flex;flex-direction:column;gap:4px;background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.ctrl label{font-size:12.5px;font-weight:700;display:flex;justify-content:space-between;gap:8px}
+.ctrl label b{font-family:var(--mono);font-weight:500;color:var(--accent)}
+.ctrl input{width:100%;accent-color:var(--accent)}
+.ctrl span{font-size:11.5px;color:var(--muted)}
+
+/* abc-xyz */
+.mx{display:grid;grid-template-columns:44px repeat(3,minmax(0,1fr));gap:4px}
+.mx .h{font-size:11px;color:var(--muted);font-weight:700;text-align:center;align-self:end;padding-bottom:2px}
+.mx .rh{font-family:var(--display);font-size:18px;display:flex;align-items:center;justify-content:center}
+.mx .cell{border-radius:7px;padding:8px;min-height:74px;display:flex;flex-direction:column;gap:1px;font-size:11.5px;min-width:0}
+.mx .cell b{font-family:var(--display);font-size:20px;line-height:1.1}
+.mx .cell .p{color:var(--muted);font-size:11px}
+.mx .cell.hot{box-shadow:inset 0 0 0 2px var(--crit)}
+
+.chartbox{position:relative;height:260px}
+.chartbox.sm{height:220px}
+.insight{margin-top:10px;font-size:13px;padding:9px 12px;border-radius:0;background:var(--surface-2);border-left:3px solid var(--accent)}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+.fchip[aria-pressed="true"]{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.fchip i{font-style:normal;font-family:var(--mono);font-size:11.5px;opacity:.75}
+.chip{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:6px;background:var(--surface-2);white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;background:color-mix(in oklab,var(--pc) 15%,var(--surface));color:var(--pc)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--pc)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:9px}
+table.t{width:100%;border-collapse:collapse;font-size:13px;min-width:680px}
+table.t th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:9px 10px;background:var(--surface-2);position:sticky;top:0;z-index:1}
+table.t td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle}
+table.t tbody tr.click{cursor:pointer}
+table.t tbody tr.click:hover{background:var(--surface-2)}
+table.t tbody tr[aria-selected="true"]{background:color-mix(in oklab,var(--accent) 12%,var(--surface))}
+.who b{display:block;font-weight:700}
+.who span{font-size:11.5px;color:var(--muted)}
+.cov{display:flex;align-items:center;gap:8px;min-width:110px}
+.cov i{display:block;height:6px;border-radius:3px;background:var(--surface-2);flex:1;position:relative;overflow:hidden}
+.cov i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--bc);border-radius:3px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-weight:700;font-size:13px}
+.btn:hover{background:var(--surface-2)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.note{font-size:12px;color:var(--muted)}
+
+.detail{display:flex;flex-direction:column;gap:12px}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.kv{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kv div{background:var(--surface-2);border-radius:7px;padding:7px 9px;min-width:0}
+.kv span{display:block;font-size:11px;color:var(--muted)}
+.kv b{font-family:var(--mono);font-weight:500;font-size:13px}
+.stores{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (max-width:560px){.stores{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.store{background:var(--surface-2);border-radius:7px;padding:6px 8px;font-size:11.5px;min-width:0}
+.store b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store .bar{height:5px;border-radius:3px;background:var(--line);margin-top:4px;position:relative;overflow:hidden}
+.store .bar i{position:absolute;inset:0 auto 0 0;background:var(--bc);border-radius:3px}
+.action{border:1px solid var(--line);border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.action h4{font-size:15px}
+
+.totals{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}
+@media (max-width:900px){.totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.totals div{background:var(--surface-2);border-radius:8px;padding:9px 11px}
+.totals span{display:block;font-size:11.5px;color:var(--muted)}
+.totals b{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums}
+.chk{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+
+/* agent */
+.agent{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);height:calc(100vh - 96px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-width:0}
+@media (max-width:1180px){.agent{position:relative;top:0;height:640px}}
+.agent-h{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.agent-h .t{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.agent-h h3{font-size:18px;display:flex;gap:8px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px color-mix(in oklab,var(--good) 25%,transparent)}
+.engine{all:unset;cursor:pointer;font-size:11.5px;font-family:var(--mono);padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.engine b{color:var(--accent);font-weight:500}
+.engine:focus-visible{outline:2px solid var(--accent)}
+.ctx{font-size:12px;color:var(--muted)}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.msg{font-size:13.5px;min-width:0}
+.msg.u{align-self:flex-end;background:var(--accent);color:var(--surface);padding:8px 12px;border-radius:12px 12px 3px 12px;max-width:88%}
+.msg.a .body{background:var(--surface-2);padding:10px 12px;border-radius:3px 12px 12px 12px;overflow-wrap:anywhere}
+.msg.a .body p{margin:0 0 7px}.msg.a .body p:last-child{margin:0}
+.msg.a .body ul,.msg.a .body ol{margin:4px 0 8px;padding-left:18px}
+.msg.a .body h4{margin:6px 0 4px;font-size:15px}
+.msg.a .body code{font-family:var(--mono);font-size:12px;background:var(--surface);padding:1px 4px;border-radius:4px}
+.msg.a .body table{border-collapse:collapse;font-size:12px;margin:6px 0;display:block;overflow-x:auto}
+.msg.a .body td,.msg.a .body th{border:1px solid var(--line);padding:3px 6px;text-align:left}
+.trace{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.trace span{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.trace span::before{content:"▸ ";color:var(--accent)}
+.thinking{color:var(--muted);font-style:italic}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line)}
+.sugg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;text-align:left}
+.sugg button:hover{background:var(--surface-2);border-color:var(--accent)}
+.composer{display:flex;gap:8px;padding:10px 16px 14px;border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:none;height:42px;min-width:0}
+.fab{display:none;position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:8;border:0;background:var(--accent);color:var(--surface);padding:11px 16px;border-radius:999px;font-weight:700;box-shadow:0 6px 18px rgb(0 0 0 / .2)}
+@media (max-width:1180px){.fab{display:block}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="9" fill="var(--accent)"/><rect x="8" y="17" width="5" height="9" rx="1" fill="var(--surface)"/><rect x="15" y="12" width="5" height="14" rx="1" fill="var(--surface)"/><rect x="22" y="8" width="5" height="18" rx="1" fill="var(--signal)"/></svg>
+    <div><h1>Stock Intelligence Desk</h1><small>AI inventory agent · 36 SKUs · 8 stores + Hyderabad DC · assumed data</small></div>
+  </div>
+  <div class="fest"><span class="cd">Diwali in <b id="dDays">13</b> days</span><span class="m">Week of 26 Oct 2026 · 12-week horizon</span></div>
+</div></header>
+
+<div class="page">
+<main>
+  <section class="brief">
+    <div>
+      <div class="eyebrow">Problem 10 · Inventory optimization</div>
+      <h2>Bestsellers run out while slow movers pile up in the back room</h2>
+      <p class="prob">The agent corrects past sales for stockout weeks, forecasts the next 12 weeks with seasonality and the moving Diwali date, classifies every SKU by value and predictability, sets service levels and reorder points from supplier lead-time variability, and recommends the decision for each SKU: reorder, expedite, transfer between stores, mark down or liquidate.</p>
+    </div>
+    <div class="pipe" id="pipe"></div>
+  </section>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid2" id="s-policy">
+    <div class="panel">
+      <div class="panel-h"><div><h3>Policy &amp; scenario controls</h3><p>Every number on the page recalculates as you move these</p></div></div>
+      <div class="ctrls">
+        <div class="ctrl"><label for="sl">Service level, A items <b id="slV"></b></label><input type="range" id="sl" min="90" max="99.5" step="0.5" value="98"><span>B = A − 3 pts, C = A − 8 pts</span></div>
+        <div class="ctrl"><label for="du">Diwali demand vs forecast <b id="duV"></b></label><input type="range" id="du" min="-30" max="40" step="5" value="0"><span>Stress-test the festival uplift</span></div>
+        <div class="ctrl"><label for="lt">Import lead-time shock <b id="ltV"></b></label><input type="range" id="lt" min="0" max="21" step="1" value="0"><span>Port or freight delays on imported SKUs</span></div>
+        <div class="ctrl"><label for="bud">Purchase budget this week <b id="budV"></b></label><input type="range" id="bud" min="10" max="120" step="5" value="60"><span>Reorders are funded by margin protected per rupee</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>ABC × XYZ classification</h3><p>ABC by revenue share, XYZ by demand variability (CV). Each cell shows SKUs, inventory at cost and the policy it gets.</p></div></div>
+      <div class="mx" id="mx"></div>
+    </div>
+  </div>
+
+  <div class="grid2e" id="s-health">
+    <div class="panel">
+      <div class="panel-h"><div><h3>Inventory health map</h3><p>Weeks of cover against weekly sales value. Top-left = fast sellers about to run out; bottom-right = slow stock tying up cash. Click a dot.</p></div></div>
+      <div class="chartbox"><canvas id="cMap" aria-label="Inventory health map"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>Both problems, by category</h3><p>Revenue at risk from stockouts (12 weeks, no action) against excess and ageing inventory at cost</p></div></div>
+      <div class="chartbox"><canvas id="cCat" aria-label="Stockout risk and excess by category"></canvas></div>
+      <div class="insight" id="catInsight"></div>
+    </div>
+  </div>
+
+  <div class="grid2" id="s-sku">
+    <div class="panel">
+      <div class="panel-h"><div><h3>SKU workbench</h3><p>Select a SKU for its forecast, inventory projection and store balance</p></div></div>
+      <div class="chips" id="fchips" style="margin-bottom:10px"></div>
+      <div class="tbl" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>SKU</th><th>Class</th><th>Status</th><th>Cover</th><th>Forecast 4w</th><th>On hand</th><th>Decision</th></tr></thead><tbody id="skuRows"></tbody></table></div>
+    </div>
+    <div class="panel" id="detail"></div>
+  </div>
+
+  <div class="panel" id="s-act">
+    <div class="panel-h"><div><h3>This week's inventory decisions</h3><p>One recommended decision per SKU that needs action. Untick a row to see what happens without it.</p></div></div>
+    <div class="tbl" style="max-height:520px;overflow:auto"><table class="t" style="min-width:880px"><thead><tr><th>Approve</th><th>SKU</th><th>Decision</th><th>Detail</th><th>Cash out</th><th>Cash in</th><th>Revenue protected</th><th>Why</th></tr></thead><tbody id="actRows"></tbody></table></div>
+    <div class="totals" id="totals"></div>
+  </div>
+</main>
+
+<aside class="agent" id="agent" aria-label="Inventory agent">
+  <div class="agent-h">
+    <div class="t"><h3><span class="dot" aria-hidden="true"></span>Merchandise Agent</h3><button class="engine" id="engineBtn"></button></div>
+    <div class="ctx">Reads demand history, forecasts, stock, lead times; can change policy settings</div>
+  </div>
+  <div class="msgs" id="msgs" aria-live="polite"></div>
+  <div class="sugg" id="sugg"></div>
+  <form class="composer" id="composer"><textarea id="q" placeholder="Ask about a SKU, category, markdowns, what-ifs…" aria-label="Message the agent"></textarea><button class="btn pri" id="sendBtn" type="submit">Send</button></form>
+</aside>
+</div>
+<button class="fab" id="fab">Ask the agent</button>
+
+<script>
+(function(){
+"use strict";
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R=rng(10102026);
+const gauss=()=>{let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct=(x,d=0)=>(x*100).toFixed(d)+"%";
+const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+function inrS(n){const a=Math.abs(n);if(a>=1e7)return"₹"+(n/1e7).toFixed(2)+" Cr";if(a>=1e5)return"₹"+(n/1e5).toFixed(1)+" L";return inr(n)}
+const fmtU=n=>Math.round(n).toLocaleString("en-IN");
+const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function alpha(hex,a){hex=hex.replace("#","");if(hex.length===3)hex=hex.split("").map(c=>c+c).join("");const n=parseInt(hex,16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+const TODAY=Date.UTC(2026,9,26);
+const wd=w=>new Date(TODAY+w*7*864e5);
+const wl=w=>wd(w).toLocaleDateString("en-GB",{day:"numeric",month:"short",timeZone:"UTC"});
+const wlY=w=>wd(w).toLocaleDateString("en-GB",{month:"short",year:"2-digit",timeZone:"UTC"});
+// normal inverse (Acklam)
+function zOf(p){const a=[-39.6968302866538,220.946098424521,-275.928510446969,138.357751867269,-30.6647980661472,2.50662827745924],b=[-54.4760987982241,161.585836858041,-155.698979859887,66.8013118877197,-13.2806815528857],c=[-.00778489400243029,-.322396458041136,-2.40075827716184,-2.54973253934373,4.37466414146497,2.93816398269878],d=[.00778469570904146,.32246712907004,2.445134137143,3.75440866190742];const q=p<.02425?Math.sqrt(-2*Math.log(p)):p>1-.02425?Math.sqrt(-2*Math.log(1-p)):0;if(p<.02425)return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);if(p>1-.02425)return-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);const r=p-.5,s=r*r;return(((((a[0]*s+a[1])*s+a[2])*s+a[3])*s+a[4])*s+a[5])*r/(((((b[0]*s+b[1])*s+b[2])*s+b[3])*s+b[4])*s+1)}
+
+/* ===================== ASSUMED DATA ===================== */
+const HW=104,FW=12;
+const DIWALI=[-104,-53,1];   // weeks (relative to 26 Oct 2026) containing Diwali: 1 Nov 2024, 21 Oct 2025, 8 Nov 2026
+const festF=(w,fs)=>DIWALI.includes(w)?1+fs:DIWALI.includes(w+1)?1+fs*.45:DIWALI.includes(w-1)?1+fs*.12:1;
+const PROF={
+ festive:[.55,.5,.6,.6,.5,.5,.6,.85,1,1.35,1.5,1],
+ appliance:[1,.9,1,1.1,1.1,.9,.9,.95,1,1.15,1.25,1.1],
+ winter:[1.6,1.2,.6,.3,.2,.2,.2,.3,.5,.9,1.6,2],
+ steady:[1,.95,1,1,1,.95,.95,1,1,1.05,1.1,1.05]
+};
+const CATS={FD:{n:"Festive décor",el:-2.2},SA:{n:"Small appliances",el:-1.8},KW:{n:"Kitchenware",el:-1.6},MA:{n:"Mobile accessories",el:-2.4},PC:{n:"Personal care",el:-1.7},HT:{n:"Home textiles",el:-2.0}};
+// id,name,price,cost%,base wk units,trend/yr,cv,festival sens,profile,import?,lead days,lead sd,moq,cover wks (of base),on order wks,eta wk
+const SKUDEF=[
+ ["FD01","LED string lights 10 m",399,.55,140,.08,.2,5,"festive",1,42,8,500,1.2,0,0],
+ ["FD02","Brass diya set (6)",649,.58,90,.05,.2,6,"festive",0,12,3,100,2,3,1],
+ ["FD03","Rangoli colour kit",199,.5,120,.03,.25,7,"festive",0,7,2,200,1.5,0,0],
+ ["FD04","Decorative lantern",899,.55,25,0,.35,4,"festive",1,40,7,100,14,0,0],
+ ["FD05","Door toran",349,.5,60,.02,.3,5,"festive",0,10,2,100,3,0,0],
+ ["FD06","Scented candle set",499,.52,40,-.05,.3,2.5,"festive",0,14,3,100,16,0,0],
+ ["SA01","Air fryer 4 L",5499,.68,55,.25,.2,1.6,"appliance",1,35,6,50,1.8,2,3],
+ ["SA02","Mixer grinder 750 W",3299,.7,70,.06,.18,1.3,"appliance",0,10,2,40,4.5,0,0],
+ ["SA03","Induction cooktop",2499,.72,35,-.08,.25,1,"appliance",0,12,3,40,13,0,0],
+ ["SA04","Electric kettle 1.5 L",999,.62,90,.04,.2,.9,"appliance",1,40,7,200,6,4,2],
+ ["SA05","Hand blender",1799,.66,30,-.1,.35,.8,"appliance",0,10,2,30,22,0,0],
+ ["SA06","Room heater 2000 W",2199,.7,20,0,.3,.3,"winter",0,14,3,30,2,0,0],
+ ["KW01","Non-stick cookware set",2999,.6,45,.05,.22,1.4,"steady",0,14,3,30,2.5,0,0],
+ ["KW02","Pressure cooker 5 L",1899,.65,75,.03,.15,1.2,"steady",0,10,2,50,4.5,2,1],
+ ["KW03","Steel dinner set (24 pc)",3499,.6,30,.02,.25,1.8,"steady",0,12,3,20,3,0,0],
+ ["KW04","Glass storage jars (6)",899,.55,50,-.04,.3,.6,"steady",1,45,8,200,18,0,0],
+ ["KW05","Cast iron tawa",1199,.5,25,.12,.3,.4,"steady",0,10,2,30,6,0,0],
+ ["KW06","Steel water bottle 1 L",499,.5,160,.08,.2,.5,"steady",1,38,6,500,9,0,0],
+ ["MA01","20 W fast charger",899,.45,260,.18,.15,.5,"steady",1,30,5,1000,1.6,3,2],
+ ["MA02","Type-C cable 1 m",349,.35,420,.15,.15,.4,"steady",1,30,5,2000,5,3,3],
+ ["MA03","TWS earbuds",1999,.6,120,.3,.22,1.2,"steady",1,28,6,300,1.4,0,0],
+ ["MA04","Power bank 10,000 mAh",1299,.62,70,-.12,.25,.7,"steady",1,30,5,300,15,0,0],
+ ["MA05","Phone case, assorted",299,.3,300,-.2,.35,.2,"steady",1,30,5,2000,30,0,0],
+ ["MA06","Screen guard",199,.25,350,0,.2,.2,"steady",0,7,2,1000,4.5,0,0],
+ ["PC01","Hair dryer 1200 W",1499,.62,40,.05,.25,1,"steady",1,35,6,100,10,0,0],
+ ["PC02","Beard trimmer",1299,.6,85,.1,.2,.9,"steady",1,32,6,200,2.2,0,0],
+ ["PC03","Body lotion 400 ml",349,.55,150,.02,.15,.3,"winter",0,7,2,300,5,0,0],
+ ["PC04","Personal care gift hamper",1299,.6,25,0,.35,4,"festive",0,10,2,50,6,0,0],
+ ["PC05","Electric toothbrush",2199,.65,20,-.05,.3,.5,"steady",1,35,6,50,20,0,0],
+ ["PC06","Face wash 150 ml",249,.5,200,.04,.15,.1,"steady",0,7,2,500,4.5,0,0],
+ ["HT01","Double blanket",1999,.55,40,.03,.25,.6,"winter",0,14,3,50,3,0,0],
+ ["HT02","Bedsheet set (king)",1499,.5,70,.04,.2,.8,"steady",0,10,2,60,6,0,0],
+ ["HT03","Cushion covers (5)",799,.45,45,-.06,.3,1,"steady",0,10,2,100,17,0,0],
+ ["HT04","Curtains, pair",1299,.5,35,0,.3,.9,"steady",0,12,3,50,10,0,0],
+ ["HT05","Bath towel set",999,.5,55,.02,.2,.5,"steady",0,10,2,60,6,0,0],
+ ["HT06","Door mats (2)",399,.45,60,-.15,.3,.3,"steady",0,7,2,200,28,0,0]
+];
+const STORES=["Ameerpet","Kukatpally","Gachibowli","Dilsukhnagar","Secunderabad","Warangal","Vijayawada","Visakhapatnam"];
+const monthOf=w=>wd(w).getUTCMonth();
+const skus=SKUDEF.map(a=>{
+  const s={id:a[0],name:a[1],cat:a[0].slice(0,2),price:a[2],cost:Math.round(a[2]*a[3]),base:a[4],trend:a[5],cv:a[6],fs:a[7],prof:a[8],imp:!!a[9],lt:a[10],ltsd:a[11],moq:a[12],covW:a[13],ooW:a[14],eta:a[15]};
+  // true demand and recorded sales (sales censored in stockout weeks)
+  s.hist=[];for(let w=-HW;w<0;w++){const dem=s.base*Math.pow(1+s.trend,(w)/52)*PROF[s.prof][monthOf(w)]*festF(w,s.fs)*Math.exp(gauss()*s.cv-s.cv*s.cv/2);
+    let avail=1;if(s.covW<3&&R()<.07)avail=.4+R()*.4;if(DIWALI.includes(w)&&s.fs>2&&R()<.6)avail=.55+R()*.3;
+    s.hist.push({w,dem,sales:Math.round(dem*avail),avail})}
+  const ds=STORES.map(()=>.6+R()*.8),dsum=ds.reduce((a,b)=>a+b,0);s.storeDem=ds.map(x=>x/dsum);s.storeMix=STORES.map((_,i)=>s.storeDem[i]*(R()<.3?2.4*R():.5+R()*.9));
+  return s;
+});
+const SM=Object.fromEntries(skus.map(s=>[s.id,s]));
+
+/* ===================== FORECASTING ===================== */
+function fitForecast(s,cut=0){
+  // data up to week -cut-1; in-stock correction: demand ≈ sales / availability
+  const h=s.hist.filter(x=>x.w<-cut).map(x=>({w:x.w,y:x.sales/Math.max(x.avail,.3),fest:festF(x.w,1)>1}));
+  const mean=h.reduce((a,x)=>a+x.y,0)/h.length;
+  const mi=Array(12).fill(0),mc=Array(12).fill(0);h.forEach(x=>{if(!x.fest){mi[monthOf(x.w)]+=x.y;mc[monthOf(x.w)]++}});
+  for(let m=0;m<12;m++)mi[m]=mc[m]?mi[m]/mc[m]:mean;const mm=mi.reduce((a,b)=>a+b,0)/12;for(let m=0;m<12;m++)mi[m]/=mm;
+  // detrended level for festival estimation
+  const nonF=h.filter(x=>!x.fest);
+  const lvlAt=w=>{const nb=nonF.filter(x=>Math.abs(x.w-w)<=6);return nb.reduce((a,x)=>a+x.y/mi[monthOf(x.w)],0)/(nb.length||1)};
+  const up={on:[],pre:[],post:[]};DIWALI.forEach(dw=>{[["on",dw],["pre",dw-1],["post",dw+1]].forEach(([k,w])=>{const x=h.find(y=>y.w===w);if(x)up[k].push(x.y/(lvlAt(w)*mi[monthOf(w)])-1)})});
+  const avg=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:0;const fu={on:Math.max(0,avg(up.on)),pre:Math.max(0,avg(up.pre)),post:Math.max(0,avg(up.post))};
+  const fmult=w=>DIWALI.includes(w)?1+fu.on:DIWALI.includes(w+1)?1+fu.pre:DIWALI.includes(w-1)?1+fu.post:1;
+  // level + trend on deseasonalised last 26 weeks
+  const last=h.slice(-26).map(x=>({w:x.w,z:x.y/(mi[monthOf(x.w)]*fmult(x.w))}));const n=last.length,sx=last.reduce((a,p)=>a+p.w,0),sy=last.reduce((a,p)=>a+p.z,0),sxx=last.reduce((a,p)=>a+p.w*p.w,0),sxy=last.reduce((a,p)=>a+p.w*p.z,0);
+  const b=(n*sxy-sx*sy)/(n*sxx-sx*sx)||0,a0=(sy-b*sx)/n;const origin=-cut;
+  const resid=last.map(p=>p.z-(a0+b*p.w));const sd=Math.sqrt(resid.reduce((q,r)=>q+r*r,0)/Math.max(1,n-2));
+  return{mi,fu,fmult,lvl:a0+b*origin,b:clamp(b,-(a0+b*origin)*.02,(a0+b*origin)*.02),sd,origin,pred:w=>Math.max(0,((a0+b*origin)+clamp(b,-(a0+b*origin)*.02,(a0+b*origin)*.02)*(w-origin))*mi[monthOf(w)]*fmult(w))};
+}
+skus.forEach(s=>{
+  s.fit=fitForecast(s);
+  const bt=fitForecast(s,8);const errs=s.hist.filter(x=>x.w>=-8).map(x=>{const act=x.sales/Math.max(x.avail,.3);return{act,f:bt.pred(x.w)}});
+  s.wmape=errs.reduce((a,e)=>a+Math.abs(e.act-e.f),0)/Math.max(1,errs.reduce((a,e)=>a+e.act,0));
+  s.sigmaW=Math.max(s.fit.sd*s.fit.mi[monthOf(0)],s.base*s.cv*.6);
+  s.fcBase=[];for(let w=0;w<FW;w++)s.fcBase.push(s.fit.pred(w));
+  // stock positions are stated in weeks of the coming 4 weeks' forecast
+  const f4=(s.fcBase[0]+s.fcBase[1]+s.fcBase[2]+s.fcBase[3])/4;s.onHand=Math.round(f4*s.covW);s.onOrder=Math.round(f4*s.ooW);
+  const ssum=s.storeMix.reduce((a,b)=>a+b,0);s.storeStock=s.storeMix.map(x=>Math.round(s.onHand*.75*x/ssum));s.dcStock=s.onHand-s.storeStock.reduce((a,b)=>a+b,0);
+  const rec=s.hist.slice(-52);s.revYr=rec.reduce((a,x)=>a+x.sales,0)*s.price;
+  const m=rec.reduce((a,x)=>a+x.sales,0)/52;s.cvD=Math.sqrt(rec.reduce((a,x)=>a+(x.sales-m)**2,0)/52)/Math.max(m,1);
+});
+// ABC by revenue, XYZ by CV
+{const sorted=[...skus].sort((a,b)=>b.revYr-a.revYr);const tot=sorted.reduce((a,s)=>a+s.revYr,0);let c=0;sorted.forEach(s=>{c+=s.revYr;s.abc=c/tot<=.7?"A":c/tot<=.9?"B":"C"});
+ skus.forEach(s=>{s.xyz=s.cvD<.35?"X":s.cvD<.7?"Y":"Z"})}
+
+/* ===================== POLICY + DECISIONS ===================== */
+const P={sl:98,du:0,lt:0,bud:60};
+const fc=(s,w)=>s.fcBase[w]*(DIWALI.includes(w)||DIWALI.includes(w+1)?1+P.du/100:1);
+const ltDays=s=>s.lt+(s.imp?P.lt:0);
+function simulate(s,extra){ // weekly projection; extra=[{w,q}]
+  let inv=s.onHand;const out=[];let lost=0,dem=0;
+  for(let w=0;w<FW;w++){if(s.onOrder&&w===s.eta)inv+=s.onOrder;(extra||[]).forEach(e=>{if(e.w===w)inv+=e.q});const d=fc(s,w);dem+=d;const sold=Math.min(inv,d);lost+=d-sold;inv-=sold;out.push(inv)}
+  return{inv:out,lost,dem,fill:dem?1-lost/dem:1};
+}
+function plan(){
+  const slA=P.sl/100,sl={A:slA,B:Math.max(.85,slA-.03),C:Math.max(.8,slA-.08)};
+  skus.forEach(s=>{
+    const L=ltDays(s)/7,sL=s.ltsd/7,z=zOf(sl[s.abc]);
+    const dAvg=(fc(s,0)+fc(s,1)+fc(s,2)+fc(s,3))/4;s.d4=fc(s,0)+fc(s,1)+fc(s,2)+fc(s,3);
+    s.ss=z*Math.sqrt(L*s.sigmaW**2+dAvg**2*sL**2);
+    let dlt=0;for(let w=0;w<Math.ceil(L+1);w++)dlt+=fc(s,Math.min(w,FW-1))*(w<Math.floor(L+1)?1:(L+1)%1||1);
+    s.dlt=dlt;s.rop=dlt+s.ss;s.pos=s.onHand+s.onOrder;
+    s.cover=s.onHand/Math.max(dAvg,.1);
+    s.noAct=simulate(s);
+    s.arrW=Math.ceil(L);
+    // excess: stock beyond 8 weeks of forecast + safety stock
+    let d8=0;for(let w=0;w<8;w++)d8+=fc(s,w);s.d8=d8;s.excess=Math.max(0,s.onHand+s.onOrder-d8-s.ss);
+    const firstOut=s.noAct.inv.findIndex(x=>x<=0);s.firstOut=firstOut;
+    // status
+    if(s.noAct.lost>s.d4*.03&&firstOut>=0&&firstOut<s.arrW+2)s.status="Stockout risk";
+    else if(s.cover>26&&s.excess>0)s.status="Ageing";
+    else if(s.excess>s.d8*.6&&s.cover>10)s.status="Overstock";
+    else if(s.pos<s.rop)s.status="Reorder due";
+    else s.status="Healthy";
+    // decision
+    s.dec=null;const ord=Math.max(0,s.rop+fc(s,0)*2-s.pos);
+    if(s.status==="Stockout risk"||s.status==="Reorder due"){
+      let q=Math.max(Math.ceil(ord),s.moq);q=Math.ceil(q/s.moq)*s.moq;
+      const tooLate=firstOut>=0&&s.arrW>firstOut+1;
+      // transfer first if stores are unbalanced
+      const sc=s.storeStock.map((x,i)=>x/Math.max(.1,dAvg*s.storeDem[i]));const surplus=s.storeStock.reduce((a,x,i)=>a+Math.max(0,x-dAvg*s.storeDem[i]*3),0)+Math.max(0,s.dcStock-dAvg*.5);
+      const withQ=simulate(s,[{w:tooLate&&s.imp?1:s.arrW,q}]);
+      if(tooLate&&s.imp){s.dec={type:"Expedite",q,w:1,cashOut:q*s.cost*1.18,cashIn:0,note:`Air-freight ${fmtU(q)} units (standard ${ltDays(s)}-day lead misses Diwali)`,sim:withQ}}
+      else if(tooLate){s.dec={type:"Expedite",q,w:Math.max(1,s.arrW-1),cashOut:q*s.cost*1.06,cashIn:0,note:`Express order of ${fmtU(q)} from local supplier`,sim:simulate(s,[{w:Math.max(1,s.arrW-1),q}])}}
+      else s.dec={type:"Reorder",q,w:s.arrW,cashOut:q*s.cost,cashIn:0,note:`Order ${fmtU(q)} units (MOQ ${fmtU(s.moq)}), lands ${wl(s.arrW)}`,sim:withQ};
+      s.dec.transfer=surplus>dAvg&&Math.max(...sc)>4*Math.max(.2,Math.min(...sc))?Math.round(Math.min(surplus,dAvg*1.5)):0;
+      s.dec.protect=(s.noAct.lost-s.dec.sim.lost)*s.price;s.dec.margin=(s.noAct.lost-s.dec.sim.lost)*(s.price-s.cost);
+    } else if(s.status==="Overstock"||s.status==="Ageing"){
+      const el=CATS[s.cat].el;const need=(s.excess+s.d8)/Math.max(s.d8,1);let disc=1-Math.pow(need,1/el);
+      if(disc<=.5){disc=Math.max(.1,Math.ceil(disc*20)/20);const units=Math.min(s.excess,s.d8*(Math.pow(1-disc,el)-1));s.dec={type:"Markdown",disc,q:Math.round(units),cashOut:0,cashIn:units*s.price*(1-disc),holding:s.excess*s.cost*.24*(Math.min(s.cover,52)/52),note:`${pct(disc)} off for 8 weeks clears ~${fmtU(units)} extra units`,protect:0,margin:units*(s.price*(1-disc)-s.cost)}}
+      else{const units=s.excess;s.dec={type:"Liquidate",q:Math.round(units),cashOut:0,cashIn:units*s.cost*.45,note:`Return to vendor or sell to a liquidator at ~45% of cost`,protect:0,margin:-units*s.cost*.55}}
+    }
+  });
+  // budget: fund purchase decisions by margin protected per rupee
+  const buys=skus.filter(s=>s.dec&&(s.dec.type==="Reorder"||s.dec.type==="Expedite")).sort((a,b)=>b.dec.margin/b.dec.cashOut-a.dec.margin/a.dec.cashOut);
+  let spent=0;buys.forEach(s=>{s.dec.funded=spent+s.dec.cashOut<=P.bud*1e5;if(s.dec.funded)spent+=s.dec.cashOut});
+  skus.forEach(s=>{if(s.dec&&s.dec.funded===undefined)s.dec.funded=true;if(s.dec&&approved[s.id]===undefined)approved[s.id]=true});
+}
+const approved={};
+const STATUSC={"Stockout risk":"--crit","Reorder due":"--warn","Healthy":"--good","Overstock":"--info","Ageing":"--c5"};
+const DECC={Reorder:"--warn",Expedite:"--crit",Markdown:"--info",Liquidate:"--c5"};
+function totals(){
+  const on=skus.filter(s=>s.dec&&approved[s.id]&&s.dec.funded);
+  const cashOut=on.reduce((a,s)=>a+s.dec.cashOut,0),cashIn=on.reduce((a,s)=>a+s.dec.cashIn,0),protect=on.reduce((a,s)=>a+s.dec.protect,0);
+  const lostNo=skus.reduce((a,s)=>a+s.noAct.lost*s.price,0);
+  const dem=skus.reduce((a,s)=>a+s.noAct.dem,0),lostU=skus.reduce((a,s)=>a+s.noAct.lost,0);
+  const lostAfter=skus.reduce((a,s)=>a+((s.dec&&approved[s.id]&&s.dec.funded&&s.dec.sim)?s.dec.sim.lost:s.noAct.lost),0);
+  const invCost=skus.reduce((a,s)=>a+s.onHand*s.cost,0),excessCost=skus.reduce((a,s)=>a+(s.status==="Overstock"||s.status==="Ageing"?s.excess*s.cost:0),0);
+  const cogs=skus.reduce((a,s)=>a+s.revYr*(s.cost/s.price),0);
+  return{cashOut,cashIn,protect,lostNo,fillNo:1-lostU/dem,fillAfter:1-lostAfter/dem,invCost,excessCost,turns:cogs/invCost,net:cashIn-cashOut,unfunded:skus.filter(s=>s.dec&&!s.dec.funded).length};
+}
+
+/* ===================== RENDER ===================== */
+const charts={};const hasChart=typeof window.Chart!=="undefined";
+function baseOpts(){const m=cssv("--muted"),line=cssv("--line");Chart.defaults.font.family='"Nunito Sans", "Segoe UI", system-ui, sans-serif';Chart.defaults.font.size=11.5;Chart.defaults.color=m;
+  return{responsive:true,maintainAspectRatio:false,animation:{duration:350},plugins:{legend:{labels:{boxWidth:10,boxHeight:10}},tooltip:{backgroundColor:cssv("--fg"),titleColor:cssv("--surface"),bodyColor:cssv("--surface"),padding:9,cornerRadius:6}},scales:{x:{grid:{display:false},ticks:{color:m},border:{color:line}},y:{grid:{color:line},ticks:{color:m},border:{display:false}}}}}
+function mk(id,cfg){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(el)charts[id]=new Chart(el,cfg)}
+const pill=(t,c)=>`<span class="pill" style="--pc:var(${c})">${esc(t)}</span>`;
+const go=id=>{const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})};
+let selSku=null,filt="Action needed";
+
+function renderTop(){
+  const T0=totals();const risk=skus.filter(s=>s.status==="Stockout risk"),over=skus.filter(s=>s.status==="Overstock"||s.status==="Ageing");
+  const acc=1-skus.reduce((a,s)=>a+s.wmape*s.revYr,0)/skus.reduce((a,s)=>a+s.revYr,0);
+  $("#pipe").innerHTML=[["01","Sense demand","Clean, in-stock corrected",`104 weeks · ${skus.reduce((a,s)=>a+s.hist.filter(x=>x.avail<1).length,0)} stockout weeks fixed`,"s-sku"],["02","Forecast","Trend, season, Diwali",`${pct(acc)} accuracy (backtest)`,"s-health"],["03","Classify & set policy","ABC-XYZ, safety stock, ROP",`Service ${P.sl}% for A items`,"s-policy"],["04","Decide","Reorder · move · mark down",`${skus.filter(s=>s.dec).length} decisions · net ${T0.net>=0?"+":"−"}${inrS(Math.abs(T0.net))}`,"s-act"]]
+   .map(([n,t,d,v,id])=>`<button data-go="${id}"><span class="st">${n}</span><b>${t}</b><span class="d">${d}</span><span class="v">${v}</span></button>`).join("");
+  $("#kpis").innerHTML=[
+    ["Inventory at cost",inrS(T0.invCost),`${T0.turns.toFixed(1)} turns a year`,"--accent"],
+    ["Stockout-risk SKUs",String(risk.length),`${risk.filter(s=>s.abc==="A").length} are A items`,"--crit"],
+    ["Revenue at risk (12w)",inrS(T0.lostNo),"Lost sales if nothing changes","--crit"],
+    ["Excess &amp; ageing stock",inrS(T0.excessCost),`${pct(T0.excessCost/T0.invCost)} of inventory, ${over.length} SKUs`,"--info"],
+    ["Fill rate (12w)",pct(T0.fillAfter,1),`from ${pct(T0.fillNo,1)} with no action`,"--good"],
+    ["Forecast accuracy",pct(acc),"1 − WMAPE, 8-week backtest","--c5"]
+  ].map(([l,v,s,c])=>`<div class="kpi" style="--kc:var(${c})"><span class="l">${l}</span><span class="v">${v}</span><span class="s">${s}</span></div>`).join("");
+  $("#slV").textContent=P.sl+"%";$("#duV").textContent=(P.du>0?"+":"")+P.du+"%";$("#ltV").textContent="+"+P.lt+" days";$("#budV").textContent="₹"+P.bud+" L";
+  const dd=Math.round((Date.UTC(2026,10,8)-TODAY)/864e5);$("#dDays").textContent=dd;
+}
+function renderMx(){
+  const pol={AX:"High service, auto-replenish",AY:"High service, review weekly",AZ:"Buffer + close watch",BX:"Standard service",BY:"Standard, review",BZ:"Order to forecast",CX:"Lean stock",CY:"Lean, consider delist",CZ:"Make-to-order / delist"};
+  let h=`<div></div><div class="h">X · steady</div><div class="h">Y · variable</div><div class="h">Z · erratic</div>`;
+  ["A","B","C"].forEach(a=>{h+=`<div class="rh">${a}</div>`;["X","Y","Z"].forEach(x=>{const cs=skus.filter(s=>s.abc===a&&s.xyz===x);const v=cs.reduce((p,s)=>p+s.onHand*s.cost,0);const bad=cs.filter(s=>s.status==="Stockout risk").length;const tint=a==="A"?28:a==="B"?16:8;
+    h+=`<div class="cell ${bad?"hot":""}" style="background:color-mix(in oklab,var(--accent) ${tint}%,var(--surface))"><b>${cs.length}</b><span>${inrS(v)}</span><span class="p">${pol[a+x]}</span>${bad?`<span class="up-bad" style="font-weight:700">${bad} at risk</span>`:""}</div>`})});
+  $("#mx").innerHTML=h;
+}
+function renderCharts(){
+  if(!hasChart)return;const o=baseOpts();
+  const pts=skus.map(s=>({x:+clamp(s.cover,.2,60).toFixed(2),y:+(s.d4/4*s.price/1e5).toFixed(2),r:4+Math.sqrt(s.onHand*s.cost/1e5)*2.4,s}));
+  const col=s=>cssv(STATUSC[s.status]);
+  mk("cMap",{type:"bubble",data:{datasets:[{label:"SKUs",data:pts,backgroundColor:pts.map(p=>alpha(col(p.s),.5)),borderColor:pts.map(p=>col(p.s)),borderWidth:pts.map(p=>p.s.id===selSku?3:1)}]},
+    options:{...o,plugins:{...o.plugins,legend:{display:false},tooltip:{...o.plugins.tooltip,callbacks:{label:c=>`${c.raw.s.id} ${c.raw.s.name}: ${c.raw.x} wks cover · ₹${c.raw.y} L/wk · ${c.raw.s.status}`}}},
+      onClick:(e,els)=>{if(els.length){selSku=pts[els[0].index].s.id;renderTable();renderDetail();renderCharts()}},
+      scales:{x:{...o.scales.y,type:"logarithmic",min:.2,max:60,title:{display:true,text:"Weeks of cover (log scale)"},ticks:{...o.scales.y.ticks,callback:v=>[.25,.5,1,2,4,8,16,32].includes(+v)?v:""}},y:{...o.scales.y,beginAtZero:true,title:{display:true,text:"Sales value, ₹ L / week"}}}}});
+  const cats=Object.keys(CATS);
+  const risk=cats.map(c=>skus.filter(s=>s.cat===c).reduce((a,s)=>a+s.noAct.lost*s.price,0)/1e5);
+  const exc=cats.map(c=>skus.filter(s=>s.cat===c&&(s.status==="Overstock"||s.status==="Ageing")).reduce((a,s)=>a+s.excess*s.cost,0)/1e5);
+  mk("cCat",{type:"bar",data:{labels:cats.map(c=>CATS[c].n),datasets:[{label:"Revenue at risk, stockouts (₹ L)",data:risk.map(v=>+v.toFixed(1)),backgroundColor:cssv("--crit"),borderRadius:4},{label:"Excess & ageing stock at cost (₹ L)",data:exc.map(v=>+v.toFixed(1)),backgroundColor:cssv("--info"),borderRadius:4}]},
+    options:{...o,scales:{x:{...o.scales.x,ticks:{...o.scales.x.ticks,autoSkip:false,maxRotation:0,callback:function(v){return this.getLabelForValue(v).split(" ")}}},y:{...o.scales.y,beginAtZero:true,title:{display:true,text:"₹ lakh"}}}}});
+  const both=cats.map((c,i)=>({c,r:risk[i],e:exc[i]})).sort((a,b)=>Math.min(b.r,b.e)-Math.min(a.r,a.e))[0];
+  $("#catInsight").innerHTML=`<b>Both problems sit side by side.</b> ${CATS[both.c].n} has ${inrS(both.r*1e5)} of revenue at risk from stockouts and ${inrS(both.e*1e5)} of excess stock. Money is tied up in the wrong SKUs, so the fix is reallocation, not more inventory.`;
+  renderSkuCharts();
+}
+function renderFilters(){
+  const groups=["Action needed","Stockout risk","Reorder due","Overstock","Ageing","Healthy","All"];
+  const cnt=g=>g==="All"?skus.length:g==="Action needed"?skus.filter(s=>s.dec).length:skus.filter(s=>s.status===g).length;
+  $("#fchips").innerHTML=groups.map(g=>`<button class="fchip" data-f="${g}" aria-pressed="${filt===g}">${g}<i>${cnt(g)}</i></button>`).join("");
+}
+function renderTable(){
+  const ord={"Stockout risk":0,"Reorder due":1,"Ageing":2,"Overstock":3,"Healthy":4};
+  let list=skus.filter(s=>filt==="All"||(filt==="Action needed"?!!s.dec:s.status===filt)).sort((a,b)=>ord[a.status]-ord[b.status]||b.revYr-a.revYr);
+  if(!selSku||!SM[selSku])selSku=list[0]?list[0].id:skus[0].id;
+  $("#skuRows").innerHTML=list.map(s=>{const w=clamp(s.cover/26,0,1)*100;return`<tr class="click" data-sku="${s.id}" tabindex="0" aria-selected="${s.id===selSku}"><td class="who"><b>${esc(s.name)}</b><span>${s.id} · ${CATS[s.cat].n}${s.imp?" · import":""}</span></td><td><span class="chip">${s.abc}${s.xyz}</span></td><td>${pill(s.status,STATUSC[s.status])}</td><td><div class="cov" style="--w:${w.toFixed(0)}%;--bc:var(${STATUSC[s.status]})"><span class="num">${s.cover.toFixed(1)}w</span><i></i></div></td><td class="n">${fmtU(s.d4)}</td><td class="n">${fmtU(s.onHand)}</td><td>${s.dec?pill(s.dec.type,DECC[s.dec.type]):'<span class="note">None</span>'}</td></tr>`}).join("")||`<tr><td colspan="7" class="note" style="padding:16px">No SKUs in this group.</td></tr>`;
+}
+function renderDetail(){
+  const s=SM[selSku];if(!s)return;const d=s.dec;
+  const sc=s.storeStock.map((x,i)=>x/Math.max(.1,(s.d4/4)*s.storeDem[i]));
+  $("#detail").innerHTML=`<div class="detail">
+   <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div style="min-width:0"><div class="eyebrow">${s.id} · ${CATS[s.cat].n} · class ${s.abc}${s.xyz}</div><h3 style="font-size:20px">${esc(s.name)}</h3><div class="chips" style="margin-top:4px">${pill(s.status,STATUSC[s.status])}${d?pill(d.type,DECC[d.type]):""}<span class="chip">${inr(s.price)} · ${pct(1-s.cost/s.price)} margin</span></div></div></div>
+   <div><div class="eyebrow" style="margin-bottom:4px">Demand history and 12-week forecast</div><div class="chartbox sm"><canvas id="cFc" aria-label="Demand and forecast"></canvas></div></div>
+   <div class="kv"><div><span>Forecast, next 4 weeks</span><b>${fmtU(s.d4)} units</b></div><div><span>Lead time</span><b>${ltDays(s)} ± ${s.ltsd} days</b></div><div><span>Safety stock</span><b>${fmtU(s.ss)}</b></div><div><span>Reorder point</span><b>${fmtU(s.rop)}</b></div><div><span>On hand + on order</span><b>${fmtU(s.onHand)} + ${fmtU(s.onOrder)}</b></div><div><span>Weeks of cover</span><b class="${s.cover<2?"up-bad":s.cover>20?"warn":""}">${s.cover.toFixed(1)}</b></div><div><span>Backtest error</span><b>${pct(s.wmape)}</b></div><div><span>Diwali uplift learned</span><b>+${pct(s.fit.fu.on)}</b></div></div>
+   <div><div class="eyebrow" style="margin-bottom:4px">Projected stock, next 12 weeks</div><div class="chartbox sm"><canvas id="cProj" aria-label="Projected inventory"></canvas></div></div>
+   <div><div class="eyebrow" style="margin-bottom:6px">Store balance (weeks of cover per store)</div><div class="stores">${STORES.map((n,i)=>{const c=sc[i];const col=c<1?"--crit":c>6?"--info":"--good";return`<div class="store"><b>${n}</b><span class="num">${fmtU(s.storeStock[i])} · ${c.toFixed(1)}w</span><div class="bar"><i style="width:${(clamp(c/8,0,1)*100).toFixed(0)}%;--bc:var(${col})"></i></div></div>`}).join("")}</div><div class="note" style="margin-top:4px">DC holds ${fmtU(s.dcStock)} units</div></div>
+   ${d?`<div class="action"><div class="eyebrow">Recommended decision</div><h4>${d.type}: ${esc(d.note)}</h4>
+     <div class="chips">${d.cashOut?`<span class="chip">Cash out ${inrS(d.cashOut)}</span>`:""}${d.cashIn?`<span class="chip">Cash in ${inrS(d.cashIn)}</span>`:""}${d.protect?`<span class="chip">Protects ${inrS(d.protect)} revenue</span>`:""}${d.transfer?`<span class="chip">Also move ${fmtU(d.transfer)} units between stores today</span>`:""}${d.holding?`<span class="chip">Saves ${inrS(d.holding)} holding cost</span>`:""}${d.funded===false?'<span class="chip up-bad">Over this week\'s budget</span>':""}</div></div>`:`<div class="action"><div class="eyebrow">No action needed</div><h4>Stock and forecast are in balance</h4></div>`}
+   <div class="chips"><button class="btn pri" data-ask="Explain the forecast and decision for ${s.id} ${esc(s.name)}">Ask agent about this SKU</button></div></div>`;
+  renderSkuCharts();
+}
+function renderSkuCharts(){
+  if(!hasChart)return;const s=SM[selSku];if(!s||!document.getElementById("cFc"))return;const o=baseOpts();const acc=cssv("--accent"),mut=cssv("--muted"),crit=cssv("--crit"),sig2=cssv("--signal"),info=cssv("--info");
+  const H=s.hist.slice(-60);const labels=[...H.map(x=>wlY(x.w)),...Array.from({length:FW},(_,w)=>wl(w))];
+  const sales=[...H.map(x=>x.sales),...Array(FW).fill(null)];
+  const corr=[...H.map(x=>x.avail<1?Math.round(x.sales/Math.max(x.avail,.3)):null),...Array(FW).fill(null)];
+  const f=[...Array(H.length-1).fill(null),H[H.length-1].sales,...Array.from({length:FW},(_,w)=>Math.round(fc(s,w)))];
+  const z=1.28;const hi=[...Array(H.length).fill(null),...Array.from({length:FW},(_,w)=>Math.round(fc(s,w)+z*s.sigmaW*Math.sqrt(1+w*.15)))];const lo=[...Array(H.length).fill(null),...Array.from({length:FW},(_,w)=>Math.max(0,Math.round(fc(s,w)-z*s.sigmaW*Math.sqrt(1+w*.15))))];
+  mk("cFc",{type:"line",data:{labels,datasets:[{label:"Sales",data:sales,borderColor:mut,borderWidth:1.6,pointRadius:0,tension:.2},{label:"Demand (in-stock corrected)",data:corr,borderColor:sig2,backgroundColor:sig2,showLine:false,pointRadius:3,pointStyle:"triangle"},{label:"80% band",data:hi,borderColor:"transparent",backgroundColor:alpha(acc,.14),pointRadius:0,fill:"+1"},{label:"band-lo",data:lo,borderColor:"transparent",pointRadius:0,fill:false},{label:"Forecast",data:f,borderColor:acc,borderWidth:2.4,pointRadius:0,tension:.25}]},
+    options:{...o,interaction:{mode:"index",intersect:false},plugins:{...o.plugins,legend:{position:"bottom",labels:{...o.plugins.legend.labels,filter:i=>i.text!=="band-lo"}}},scales:{x:{...o.scales.x,ticks:{...o.scales.x.ticks,maxTicksLimit:8,maxRotation:0}},y:{...o.scales.y,beginAtZero:true,title:{display:true,text:"units / week"}}}}});
+  const base=s.noAct.inv,withP=s.dec&&s.dec.sim&&approved[s.id]?s.dec.sim.inv:null;
+  mk("cProj",{type:"line",data:{labels:Array.from({length:FW},(_,w)=>wl(w)),datasets:[{label:"No action",data:base.map(Math.round),borderColor:crit,borderWidth:2,pointRadius:2,stepped:true},...(withP?[{label:"With decision",data:withP.map(Math.round),borderColor:acc,borderWidth:2.4,pointRadius:2,stepped:true,backgroundColor:alpha(acc,.1),fill:true}]:[]),{label:"Reorder point",data:Array(FW).fill(Math.round(s.rop)),borderColor:alpha(sig2,.9),borderDash:[5,4],borderWidth:1.4,pointRadius:0},{label:"Safety stock",data:Array(FW).fill(Math.round(s.ss)),borderColor:alpha(info,.8),borderDash:[2,3],borderWidth:1.2,pointRadius:0}]},
+    options:{...o,interaction:{mode:"index",intersect:false},plugins:{...o.plugins,legend:{position:"bottom"}},scales:{x:o.scales.x,y:{...o.scales.y,beginAtZero:true,title:{display:true,text:"units on hand (end of week)"}}}}});
+}
+function renderActions(){
+  const list=skus.filter(s=>s.dec).sort((a,b)=>{const o={Expedite:0,Reorder:1,Markdown:2,Liquidate:3};return o[a.dec.type]-o[b.dec.type]||(b.dec.protect+b.dec.cashIn)-(a.dec.protect+a.dec.cashIn)});
+  $("#actRows").innerHTML=list.map(s=>{const d=s.dec;const why=d.type==="Reorder"||d.type==="Expedite"?`Runs out ${s.firstOut>=0?wl(s.firstOut):"soon"}; ${fmtU(s.noAct.lost)} units of demand lost`:`${s.cover.toFixed(0)} weeks of cover; ${fmtU(s.excess)} units above need`;
+    return`<tr><td><input type="checkbox" class="chk" data-ap="${s.id}" ${approved[s.id]?"checked":""} ${d.funded===false?"disabled":""} aria-label="Approve ${s.id}"></td><td class="who"><b>${esc(s.name)}</b><span>${s.id} · ${s.abc}${s.xyz}</span></td><td>${pill(d.type,DECC[d.type])}${d.funded===false?'<div class="note up-bad">Over budget</div>':""}</td><td style="font-size:12.5px">${esc(d.note)}${d.transfer?`<div class="note">+ transfer ${fmtU(d.transfer)} units between stores</div>`:""}</td><td class="n">${d.cashOut?inrS(d.cashOut):"-"}</td><td class="n up-good">${d.cashIn?inrS(d.cashIn):"-"}</td><td class="n">${d.protect?inrS(d.protect):"-"}</td><td style="font-size:12px;color:var(--muted)">${why}</td></tr>`}).join("");
+  const T0=totals();
+  $("#totals").innerHTML=`<div><span>Purchase spend</span><b>${inrS(T0.cashOut)}</b></div><div><span>Cash released</span><b class="up-good">${inrS(T0.cashIn)}</b></div><div><span>Net working capital</span><b class="${T0.net>=0?"up-good":"up-bad"}">${T0.net>=0?"+":"−"}${inrS(Math.abs(T0.net))}</b></div><div><span>Revenue protected (12w)</span><b>${inrS(T0.protect)}</b></div><div><span>Fill rate</span><b>${pct(T0.fillNo,1)} → ${pct(T0.fillAfter,1)}</b></div>`;
+}
+function renderAll(){plan();renderTop();renderMx();renderFilters();renderTable();renderDetail();renderActions();renderCharts()}
+
+/* ===================== AGENT TOOLS ===================== */
+const findSku=t=>{const m=t.match(/\b(fd|sa|kw|ma|pc|ht)\s?-?(\d{2})\b/i);if(m&&SM[(m[1]+m[2]).toUpperCase()])return SM[(m[1]+m[2]).toUpperCase()];const l=t.toLowerCase();
+  const kw=[["FD01",/string light|led light|fairy light/],["FD02",/diya/],["FD03",/rangoli/],["FD04",/lantern/],["FD05",/toran/],["FD06",/candle/],["SA01",/air fryer|airfryer/],["SA02",/mixer|grinder/],["SA03",/induction/],["SA04",/kettle/],["SA05",/hand blender|blender/],["SA06",/heater/],["KW01",/cookware|non-stick/],["KW02",/pressure cooker/],["KW03",/dinner set/],["KW04",/jar/],["KW05",/tawa/],["KW06",/bottle/],["MA01",/charger/],["MA02",/cable/],["MA03",/earbud|tws/],["MA04",/power bank/],["MA05",/phone case|cases/],["MA06",/screen guard/],["PC01",/hair dryer|dryer/],["PC02",/trimmer/],["PC03",/lotion/],["PC04",/hamper/],["PC05",/toothbrush/],["PC06",/face wash/],["HT01",/blanket/],["HT02",/bedsheet/],["HT03",/cushion/],["HT04",/curtain/],["HT05",/towel/],["HT06",/door mat|doormat/]];
+  for(const [id,re] of kw)if(re.test(l))return SM[id];return null};
+const findCat=t=>{const l=t.toLowerCase();if(/festive|d[eé]cor/.test(l))return"FD";if(/appliance/.test(l))return"SA";if(/kitchen/.test(l))return"KW";if(/mobile|accessor/.test(l))return"MA";if(/personal care/.test(l))return"PC";if(/textile|home linen/.test(l))return"HT";return null};
+const T={
+ inventory_overview(){const T0=totals();return{week_of:wl(0),diwali:"8 Nov 2026",skus:skus.length,policy:{service_level_A:P.sl,diwali_vs_forecast_pct:P.du,import_lead_shock_days:P.lt,purchase_budget_lakh:P.bud},
+   inventory_cost_inr:Math.round(T0.invCost),turns:+T0.turns.toFixed(1),excess_ageing_cost_inr:Math.round(T0.excessCost),revenue_at_risk_12w_inr:Math.round(T0.lostNo),fill_rate_no_action:+T0.fillNo.toFixed(3),fill_rate_with_plan:+T0.fillAfter.toFixed(3),
+   status_counts:Object.fromEntries(Object.keys(STATUSC).map(k=>[k,skus.filter(s=>s.status===k).length])),
+   stockout_risk:skus.filter(s=>s.status==="Stockout risk").sort((a,b)=>b.noAct.lost*b.price-a.noAct.lost*a.price).map(s=>({id:s.id,name:s.name,cls:s.abc+s.xyz,cover_wks:+s.cover.toFixed(1),runs_out:s.firstOut>=0?wl(s.firstOut):null,lost_rev_inr:Math.round(s.noAct.lost*s.price),decision:s.dec?s.dec.type:null})),
+   overstock:skus.filter(s=>s.status==="Overstock"||s.status==="Ageing").sort((a,b)=>b.excess*b.cost-a.excess*a.cost).map(s=>({id:s.id,name:s.name,cover_wks:+s.cover.toFixed(1),excess_cost_inr:Math.round(s.excess*s.cost),decision:s.dec?s.dec.type+(s.dec.disc?" "+pct(s.dec.disc):""):null})),
+   plan:{purchase_inr:Math.round(T0.cashOut),cash_released_inr:Math.round(T0.cashIn),net_working_capital_inr:Math.round(T0.net),revenue_protected_inr:Math.round(T0.protect),over_budget:T0.unfunded}}},
+ sku_detail({sku}){const s=SM[String(sku).toUpperCase()]||findSku(String(sku||""));if(!s)throw new Error("Unknown SKU");return{id:s.id,name:s.name,category:CATS[s.cat].n,price:s.price,cost:s.cost,class:s.abc+s.xyz,status:s.status,on_hand:s.onHand,on_order:s.onOrder,on_order_eta:s.onOrder?wl(s.eta):null,cover_wks:+s.cover.toFixed(1),
+   forecast_next_12w:Array.from({length:FW},(_,w)=>({week:wl(w),units:Math.round(fc(s,w))})),learned_diwali_uplift:+s.fit.fu.on.toFixed(2),backtest_wmape:+s.wmape.toFixed(2),stockout_weeks_corrected:s.hist.filter(x=>x.avail<1).length,
+   lead_days:ltDays(s),lead_sd_days:s.ltsd,import:s.imp,moq:s.moq,safety_stock:Math.round(s.ss),reorder_point:Math.round(s.rop),runs_out:s.firstOut>=0?wl(s.firstOut):null,lost_units_no_action:Math.round(s.noAct.lost),excess_units:Math.round(s.excess),
+   stores:STORES.map((n,i)=>({store:n,stock:s.storeStock[i],cover_wks:+(s.storeStock[i]/Math.max(.1,s.d4/4*s.storeDem[i])).toFixed(1)})),
+   decision:s.dec?{type:s.dec.type,detail:s.dec.note,qty:s.dec.q,discount:s.dec.disc||null,cash_out_inr:Math.round(s.dec.cashOut),cash_in_inr:Math.round(s.dec.cashIn),revenue_protected_inr:Math.round(s.dec.protect||0),transfer_units:s.dec.transfer||0,funded:s.dec.funded}:"none"}},
+ category_summary({category}){const c=CATS[String(category).toUpperCase()]?String(category).toUpperCase():findCat(String(category||""));if(!c)throw new Error("Unknown category");const cs=skus.filter(s=>s.cat===c);return{category:CATS[c].n,price_elasticity:CATS[c].el,skus:cs.map(s=>({id:s.id,name:s.name,cls:s.abc+s.xyz,status:s.status,cover_wks:+s.cover.toFixed(1),decision:s.dec?s.dec.type:null})),revenue_at_risk_inr:Math.round(cs.reduce((a,s)=>a+s.noAct.lost*s.price,0)),excess_cost_inr:Math.round(cs.reduce((a,s)=>a+(s.status==="Overstock"||s.status==="Ageing"?s.excess*s.cost:0),0))}},
+ action_plan({type}){const list=skus.filter(s=>s.dec&&(!type||s.dec.type.toLowerCase()===String(type).toLowerCase()));const T0=totals();return{actions:list.map(s=>({sku:s.id+" "+s.name,type:s.dec.type,detail:s.dec.note,cash_out_inr:Math.round(s.dec.cashOut),cash_in_inr:Math.round(s.dec.cashIn),revenue_protected_inr:Math.round(s.dec.protect||0),funded:s.dec.funded,approved:!!approved[s.id]})),totals:{purchase_inr:Math.round(T0.cashOut),cash_released_inr:Math.round(T0.cashIn),net_inr:Math.round(T0.net),revenue_protected_inr:Math.round(T0.protect),fill_rate:+T0.fillAfter.toFixed(3)}}},
+ set_policy({service_level,diwali_vs_forecast_pct,import_lead_shock_days,budget_lakh}){const before=totals();const st0=Object.fromEntries(skus.map(s=>[s.id,s.status]));
+   if(service_level!=null)P.sl=clamp(+service_level,90,99.5);if(diwali_vs_forecast_pct!=null)P.du=clamp(+diwali_vs_forecast_pct,-30,40);if(import_lead_shock_days!=null)P.lt=clamp(+import_lead_shock_days,0,21);if(budget_lakh!=null)P.bud=clamp(+budget_lakh,10,120);
+   $("#sl").value=P.sl;$("#du").value=P.du;$("#lt").value=P.lt;$("#bud").value=P.bud;renderAll();const after=totals();
+   return{policy:{...P},changed_status:skus.filter(s=>st0[s.id]!==s.status).map(s=>`${s.id}: ${st0[s.id]} → ${s.status}`),revenue_at_risk_before_inr:Math.round(before.lostNo),revenue_at_risk_after_inr:Math.round(after.lostNo),purchase_before_inr:Math.round(before.cashOut),purchase_after_inr:Math.round(after.cashOut),fill_rate_after:+after.fillAfter.toFixed(3),over_budget:after.unfunded}},
+ markdown_check({sku,discount_pct}){const s=SM[String(sku).toUpperCase()]||findSku(String(sku||""));if(!s)throw new Error("Unknown SKU");const d=clamp((+discount_pct||20)/100,.05,.6);const el=CATS[s.cat].el;const mult=Math.pow(1-d,el);const units=s.d8*mult;
+   return{sku:s.id+" "+s.name,discount:d,elasticity:el,demand_multiplier:+mult.toFixed(2),units_8w_at_discount:Math.round(units),units_8w_full_price:Math.round(s.d8),excess_units:Math.round(s.excess),clears_excess:units-s.d8>=s.excess,revenue_8w_inr:Math.round(units*s.price*(1-d)),gross_margin_8w_inr:Math.round(units*(s.price*(1-d)-s.cost))}}
+};
+
+/* ===================== BUILT-IN ENGINE ===================== */
+function local(q){
+  const steps=[];const call=(n,a)=>{steps.push(n+"("+(a?Object.values(a).filter(v=>v!=null&&v!=="").join(", "):"")+")");return T[n](a||{})};
+  const t=q.toLowerCase();const num=(t.match(/(-?\d+(?:\.\d+)?)/)||[])[1];
+  // what-if / policy changes
+  if(/what if|set|change|raise|lower|increase|reduce|simulate|scenario/.test(t)&&/service|diwali|festival|lead|delay|budget/.test(t)&&num!=null){
+    const a={};if(/service/.test(t))a.service_level=+num;else if(/diwali|festival/.test(t))a.diwali_vs_forecast_pct=/lower|weaker|less|drop|-/.test(t)?-Math.abs(+num):+num;else if(/lead|delay|port/.test(t))a.import_lead_shock_days=+num;else if(/budget/.test(t))a.budget_lakh=+num;
+    const r=call("set_policy",a);
+    return{steps,text:`#### Scenario applied: ${Object.entries(a).map(([k,v])=>k.replace(/_/g," ")+" = "+v).join(", ")}\n- Revenue at risk (no action): ${inrS(r.revenue_at_risk_before_inr)} → **${inrS(r.revenue_at_risk_after_inr)}**\n- Purchase spend in the plan: ${inrS(r.purchase_before_inr)} → **${inrS(r.purchase_after_inr)}**\n- Fill rate with plan: **${pct(r.fill_rate_after,1)}**${r.over_budget?` · ${r.over_budget} buy decision${r.over_budget>1?"s":""} now over budget`:""}\n${r.changed_status.length?`\n**Status changes:** ${r.changed_status.slice(0,8).join("; ")}`:"\nNo SKU changed status."}\n\nThe dashboard has been updated to this scenario.`}}
+  if(/why|both|same time|root cause/.test(t)&&!findSku(q)){steps.push("inventory_overview()");return overviewAns(steps)}
+  const s0=findSku(q);
+  if(s0&&/markdown|discount|% off|sale|clear/.test(t)&&num!=null&&!/\b(fd|sa|kw|ma|pc|ht)\d{2}\b/i.test(num)){const r=call("markdown_check",{sku:s0.id,discount_pct:+num});
+    return{steps,text:`#### ${pct(r.discount)} markdown on ${r.sku}\nPrice elasticity ${r.elasticity} → demand ×**${r.demand_multiplier}**.\n- 8-week sales: ${fmtU(r.units_8w_full_price)} at full price → **${fmtU(r.units_8w_at_discount)}** discounted\n- Excess to clear: ${fmtU(r.excess_units)} units → ${r.clears_excess?"**clears it**":"**does not clear it**; go deeper or liquidate the rest"}\n- Revenue ${inrS(r.revenue_8w_inr)}, gross margin ${inrS(r.gross_margin_8w_inr)}`}}
+  if(s0){const s=call("sku_detail",{sku:s0.id});const d=s.decision;
+    return{steps,text:`#### ${s.id} ${s.name}: ${s.status} (class ${s.class})\nOn hand **${fmtU(s.on_hand)}**${s.on_order?` + ${fmtU(s.on_order)} arriving ${s.on_order_eta}`:""} = **${s.cover_wks} weeks** of cover.\n\n**Forecast:** ${s.forecast_next_12w.slice(0,4).map(f=>`${f.week} ${fmtU(f.units)}`).join(", ")}…\nThe model learned a **+${pct(s.learned_diwali_uplift)}** Diwali-week uplift from the last two festivals, corrected ${s.stockout_weeks_corrected} past stockout weeks, and has a ${pct(s.backtest_wmape)} backtest error.\n\n**Policy:** lead time ${s.lead_days}±${s.lead_sd_days} days → safety stock ${fmtU(s.safety_stock)}, reorder point **${fmtU(s.reorder_point)}**.${s.runs_out?` Without action it runs out **${s.runs_out}** and loses ${fmtU(s.lost_units_no_action)} units.`:""}${s.excess_units>0?` ${fmtU(s.excess_units)} units are above 8 weeks' need.`:""}\n\n**Decision:** ${d==="none"?"none; stock matches demand.":`**${d.type}**: ${d.detail}.${d.transfer_units?` Also move ${fmtU(d.transfer_units)} units from over-stocked to short stores today.`:""}${d.cash_out_inr?` Spend ${inrS(d.cash_out_inr)}`:""}${d.cash_in_inr?` Releases ${inrS(d.cash_in_inr)}`:""}${d.revenue_protected_inr?`, protects ${inrS(d.revenue_protected_inr)} revenue`:""}.${d.funded===false?" Currently over budget.":""}`}`}}
+  const c=findCat(q);
+  if(c){const r=call("category_summary",{category:c});
+    return{steps,text:`#### ${r.category}\nRevenue at risk from stockouts ${inrS(r.revenue_at_risk_inr)} · excess stock ${inrS(r.excess_cost_inr)} · price elasticity ${r.price_elasticity}\n${r.skus.map(s=>`- ${s.id} ${s.name} (${s.cls}): ${s.status}, ${s.cover_wks} wks${s.decision?" → **"+s.decision+"**":""}`).join("\n")}`}}
+  if(/markdown|overstock|excess|slow|dead|ageing|aging|clear|liquidat|cash|working capital/.test(t)){const r=call("inventory_overview");const md=call("action_plan",{});const sells=md.actions.filter(a=>a.type==="Markdown"||a.type==="Liquidate");
+    return{steps,text:`#### Slow stock: ${inrS(r.excess_ageing_cost_inr)} tied up\n${r.overstock.map(s=>`- **${s.name}** (${s.id}): ${s.cover_wks} wks cover, ${inrS(s.excess_cost_inr)} excess → ${s.decision}`).join("\n")}\n\nThese actions release **${inrS(sells.reduce((a,x)=>a+x.cash_in_inr,0))}** of cash, which covers ${pct(sells.reduce((a,x)=>a+x.cash_in_inr,0)/Math.max(1,r.plan.purchase_inr))} of this week's purchases for at-risk bestsellers. Stop reordering all of them until cover is below 8 weeks.`}}
+  if(/reorder|buy|purchase|order|stockout|run out|bestseller|out of stock|expedite/.test(t)){const r=call("inventory_overview");
+    return{steps,text:`#### SKUs that will run out\n${r.stockout_risk.map((s,i)=>`${i+1}. **${s.name}** (${s.id}, ${s.cls}): ${s.cover_wks} wks cover, out ${s.runs_out||"soon"}, ${inrS(s.lost_rev_inr)} at risk → ${s.decision}`).join("\n")}\n\nPlan: spend ${inrS(r.plan.purchase_inr)} on buys, which protects ${inrS(r.plan.revenue_protected_inr)} of revenue.${r.plan.over_budget?` ${r.plan.over_budget} buy${r.plan.over_budget>1?"s are":" is"} over the ₹${r.policy.purchase_budget_lakh} L budget.`:""} Import SKUs whose normal lead time misses Diwali are switched to air freight.`}}
+  return overviewAns(steps);
+}
+function overviewAns(steps){const r=T.inventory_overview();
+  return{steps,text:`#### Why we have stockouts and overstock at the same time\n1. **Buying is based on last month's sales, not a forecast.** Sales history is distorted: weeks when items were out of stock look like low demand, so bestsellers get under-ordered.\n2. **Diwali isn't modelled properly.** It moved from 1 Nov (2024) to 21 Oct (2025) to 8 Nov (2026), so copying last year's calendar misses the spike.\n3. **One policy for every SKU.** Fast A items and slow C items get the same treatment, so cash sits in the wrong products.\n\n**Right now:** ${r.status_counts["Stockout risk"]} SKUs will stock out (${inrS(r.revenue_at_risk_12w_inr)} revenue at risk), while ${inrS(r.excess_ageing_cost_inr)} is tied up in ${r.overstock.length} overstocked SKUs.\n\n**Plan:** buy ${inrS(r.plan.purchase_inr)}, release ${inrS(r.plan.cash_released_inr)} through markdowns and liquidation (net ${r.plan.net_working_capital_inr>=0?"+":"−"}${inrS(Math.abs(r.plan.net_working_capital_inr))}), and lift fill rate from ${pct(r.fill_rate_no_action,1)} to **${pct(r.fill_rate_with_plan,1)}**.`};
+}
+
+/* ===================== CLAUDE ENGINE ===================== */
+let sample=null,useClaude=false,claudeOK=false;
+const TOOLDEFS=[
+ {name:"inventory_overview",description:"Policy settings, inventory value, turns, revenue at risk, excess, fill rate, status counts, stockout-risk and overstock lists, plan totals. Call first for broad questions."},
+ {name:"sku_detail",description:"One SKU: stock, 12-week forecast, learned Diwali uplift, backtest error, lead time, safety stock, reorder point, store balance, decision.",inputSchema:{type:"object",properties:{sku:{type:"string",description:"SKU id like MA03 or product name"}},required:["sku"]}},
+ {name:"category_summary",description:"One category's SKUs with status and decisions, revenue at risk, excess, price elasticity.",inputSchema:{type:"object",properties:{category:{type:"string",enum:Object.keys(CATS)}},required:["category"]}},
+ {name:"action_plan",description:"All recommended decisions (optionally one type: Reorder, Expedite, Markdown, Liquidate) with cash effects and totals.",inputSchema:{type:"object",properties:{type:{type:"string"}}}},
+ {name:"set_policy",description:"Change service level (90-99.5), Diwali demand vs forecast % (-30..40), import lead-time shock days (0-21), or purchase budget ₹ lakh (10-120). Recalculates the dashboard; returns before/after.",inputSchema:{type:"object",properties:{service_level:{type:"number"},diwali_vs_forecast_pct:{type:"number"},import_lead_shock_days:{type:"number"},budget_lakh:{type:"number"}}}},
+ {name:"markdown_check",description:"Simulate an 8-week markdown on a SKU using category price elasticity: units, whether it clears excess, revenue and margin.",inputSchema:{type:"object",properties:{sku:{type:"string"},discount_pct:{type:"number"}},required:["sku","discount_pct"]}}
+];
+const RULES=`You are Merchandise Agent, an AI inventory analyst for a home & electronics retailer with 8 stores (Hyderabad, Warangal, Vijayawada, Visakhapatnam) and a Hyderabad DC; 36 SKUs in 6 categories. All data is assumed/synthetic for a case study. Today is the week of 26 Oct 2026; Diwali is 8 Nov 2026. Forecasts use 104 weeks of sales corrected for stockout weeks (sales ÷ in-stock share), monthly seasonal indices, a Diwali uplift learned from the moving festival dates, and a trended level; accuracy from an 8-week backtest. Policy: ABC by revenue, XYZ by demand CV; safety stock = z·√(L·σd² + d²·σL²); reorder point = lead-time demand + safety stock. Decisions: reorder, expedite (when lead time misses the stockout), store transfer, markdown (price elasticity), liquidate. Use tools for every number; never invent SKUs or figures. Use set_policy for what-if questions and say the dashboard changed. Indian currency (₹, lakh, crore). Lead with the answer, then evidence, then actions. Under ~220 words. Short markdown: '####' headings, bullets, numbered steps, **bold** for key numbers.`;
+async function askClaude(q,hist,onStep,onText,signal){const turns=[{role:"user",content:RULES},...hist.slice(-8),{role:"user",content:q}];
+  const tools=TOOLDEFS.map(d=>({...d,execute:i=>{onStep(d.name+"("+Object.values(i||{}).join(", ")+")");return T[d.name](i||{})}}));
+  return(await sample(turns,{tools,signal,modelTier:"quick",onText:({text})=>onText(text)})).text}
+
+/* ===================== CHAT ===================== */
+const hist=[];let busy=false,ctl=null;
+function md(s){const lines=String(s).replace(/\r/g,"").split("\n");let out="",list=null,tbl=[];
+  const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>").replace(/`([^`]+)`/g,"<code>$1</code>");
+  const close=()=>{if(list){out+=`</${list}>`;list=null}};const flushT=()=>{if(!tbl.length)return;const rows=tbl.filter(r=>!/^\s*\|?\s*:?-{2,}/.test(r)).map(r=>r.trim().replace(/^\||\|$/g,"").split("|"));out+="<table>"+rows.map((r,i)=>"<tr>"+r.map(c=>i?`<td>${inl(c.trim())}</td>`:`<th>${inl(c.trim())}</th>`).join("")+"</tr>").join("")+"</table>";tbl=[]};
+  for(const l of lines){if(/^\s*\|.*\|\s*$/.test(l)){close();tbl.push(l);continue}else flushT();let m;
+    if(m=l.match(/^#{1,6}\s+(.*)/)){close();out+=`<h4>${inl(m[1])}</h4>`}else if(m=l.match(/^\s*[-*•]\s+(.*)/)){if(list!=="ul"){close();out+="<ul>";list="ul"}out+=`<li>${inl(m[1])}</li>`}
+    else if(m=l.match(/^\s*\d+[.)]\s+(.*)/)){if(list!=="ol"){close();out+="<ol>";list="ol"}out+=`<li>${inl(m[1])}</li>`}else if(l.trim()===""){close()}else{close();out+=`<p>${inl(l)}</p>`}}
+  close();flushT();return out}
+function addMsg(role,html){const d=document.createElement("div");d.className="msg "+role;if(role==="u")d.textContent=html;else d.innerHTML=`<div class="trace"></div><div class="body">${html}</div>`;$("#msgs").appendChild(d);$("#msgs").scrollTop=$("#msgs").scrollHeight;return d}
+function engineLabel(){$("#engineBtn").innerHTML=useClaude?"engine: <b>Claude · live</b>":"engine: <b>built-in</b>"}
+async function send(q){q=q.trim();if(!q||busy)return;busy=true;$("#sendBtn").textContent="Stop";$("#q").value="";
+  addMsg("u",q);const m=addMsg("a",`<span class="thinking">Analysing…</span>`);const tr=m.querySelector(".trace"),body=m.querySelector(".body");
+  const step=s=>{const sp=document.createElement("span");sp.textContent=s;tr.appendChild(sp)};let text="";
+  try{if(useClaude&&sample){ctl=new AbortController();text=await askClaude(q,hist,step,t=>{body.innerHTML=md(t);$("#msgs").scrollTop=$("#msgs").scrollHeight},ctl.signal);body.innerHTML=md(text)}
+    else{await new Promise(r=>setTimeout(r,350));const r=local(q);r.steps.forEach(step);text=r.text;body.innerHTML=md(text)}
+    hist.push({role:"user",content:q},{role:"assistant",content:text})}
+  catch(e){const c=e&&e.code;
+    if(c==="cancelled")body.innerHTML=e.text?md(e.text):`<span class="thinking">Stopped.</span>`;
+    else if(["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed","tools_unavailable"].includes(c)){claudeOK=false;useClaude=false;engineLabel();const r=local(q);r.steps.forEach(step);body.innerHTML=`<p class="note">Claude isn't available here, so the built-in engine answered.</p>`+md(r.text);hist.push({role:"user",content:q},{role:"assistant",content:r.text})}
+    else if(c==="rate_limited")body.innerHTML=`<p>Claude is rate-limited right now. Try again in a minute or switch to the built-in engine.</p>`;
+    else if(c)body.innerHTML=(e.text?md(e.text):"")+`<p class="note">The answer was interrupted (${esc(c)}). Send again to retry.</p>`;
+    else body.innerHTML=`<p>Something went wrong: ${esc(e&&e.message||e)}</p>`}
+  finally{busy=false;ctl=null;$("#sendBtn").textContent="Send";$("#msgs").scrollTop=$("#msgs").scrollHeight}}
+function greet(){const T0=totals();const r=skus.filter(s=>s.status==="Stockout risk").sort((a,b)=>b.noAct.lost*b.price-a.noAct.lost*a.price);
+  addMsg("a",md(`#### Merchandise agent ready\n**${r.length} SKUs** will run out in the next 12 weeks, the costliest being **${r[0]?r[0].name:"-"}**, putting **${inrS(T0.lostNo)}** of revenue at risk. At the same time **${inrS(T0.excessCost)}** is tied up in slow stock.\n\nThis week's plan lifts fill rate from ${pct(T0.fillNo,1)} to **${pct(T0.fillAfter,1)}** with a net working-capital effect of ${T0.net>=0?"+":"−"}${inrS(Math.abs(T0.net))}. Ask me about any SKU, a category, markdowns, or a what-if.`))}
+$("#sugg").innerHTML=["Why do we have stockouts and overstock at the same time?","Which bestsellers will run out before Diwali?","Explain the forecast for TWS earbuds","What if Diwali demand is 20% higher?","Will a 30% markdown clear the door mats?","Where is cash tied up in slow stock?"].map(s=>`<button type="button">${esc(s)}</button>`).join("");
+
+/* ===================== EVENTS ===================== */
+document.addEventListener("click",e=>{
+  const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
+  const a=e.target.closest("[data-ask]");if(a){send(a.dataset.ask);if(innerWidth<=1180)go("agent");return}
+  const r=e.target.closest("tr[data-sku]");if(r){selSku=r.dataset.sku;renderTable();renderDetail();renderCharts();return}
+  const f=e.target.closest("[data-f]");if(f){filt=f.dataset.f;selSku=null;renderFilters();renderTable();renderDetail();renderCharts();return}
+  const sg=e.target.closest("#sugg button");if(sg){send(sg.textContent);return}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"){const r=e.target.closest&&e.target.closest("tr[data-sku]");if(r){selSku=r.dataset.sku;renderTable();renderDetail();renderCharts()}}});
+document.addEventListener("change",e=>{const ap=e.target.closest("[data-ap]");if(ap){approved[ap.dataset.ap]=ap.checked;renderTop();renderActions();renderSkuCharts()}});
+[["sl","sl"],["du","du"],["lt","lt"],["bud","bud"]].forEach(([id,k])=>$("#"+id).addEventListener("input",e=>{P[k]=+e.target.value;renderAll()}));
+$("#composer").addEventListener("submit",e=>{e.preventDefault();if(busy&&ctl){ctl.abort();return}send($("#q").value)});
+$("#q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#composer").requestSubmit()}});
+$("#engineBtn").addEventListener("click",()=>{if(!claudeOK){addMsg("a",md("Claude isn't available in this view, so I'm using the built-in analytics engine. It runs the same tools on the same data."));return}useClaude=!useClaude;engineLabel()});
+$("#fab").addEventListener("click",()=>go("agent"));
+const redraw=()=>renderCharts();
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",redraw)}catch(_){}
+new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+renderAll();engineLabel();greet();
+(async()=>{try{if(!window.claude||!window.claude.use)return;const s=await window.claude.use("sample");if(!s)return;const lim=await s.limits().catch(()=>null);if(!lim||!lim.tools)return;sample=s;claudeOK=true;useClaude=true;engineLabel()}catch(_){}})();
+})();
+</script>
+
+</body></html>
